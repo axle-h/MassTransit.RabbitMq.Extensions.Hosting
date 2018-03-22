@@ -1,0 +1,27 @@
+version: '3'
+services:
+  client:
+    build: .
+    depends_on:
+      - rabbitmq
+    environment:
+      - MODE=client
+      - CONNECTIONSTRINGS__RABBITMQ=amqp://guest:guest@rabbitmq
+  server:
+    build: .
+    depends_on:
+      - rabbitmq
+    environment:
+      - MODE=server
+      - CONNECTIONSTRINGS__RABBITMQ=amqp://guest:guest@rabbitmq
+  audit:
+    build: .
+    depends_on:
+      - rabbitmq
+    environment:
+      - MODE=audit
+      - CONNECTIONSTRINGS__RABBITMQ=amqp://guest:guest@rabbitmq
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "15672:15672"

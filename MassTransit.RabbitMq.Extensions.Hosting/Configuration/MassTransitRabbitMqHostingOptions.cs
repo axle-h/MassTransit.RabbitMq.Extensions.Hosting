@@ -13,11 +13,11 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Configuration
         /// <summary>
         /// Gets or sets the RabbitMQ username.
         /// </summary>
-        public string Username { get; set; }
+        public string RabbitMqUsername { get; set; }
 
         /// <summary>
         /// Gets or sets the RabbitMQ password.
         /// </summary>
-        public string Password { get; set; }
+        public string RabbitMqPassword { get; set; }
     }
 }

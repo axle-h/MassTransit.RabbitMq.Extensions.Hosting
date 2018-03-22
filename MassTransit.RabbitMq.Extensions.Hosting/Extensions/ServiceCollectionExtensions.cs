@@ -38,20 +38,13 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Extensions
         }
 
         public static IMassTransitRabbitMqHostingBuilder AddMassTransitRabbitMqHostedService(this IServiceCollection services,
-                                                                                             string rabbitMqUrl = "rabbitmq://localhost",
-                                                                                             string username = "guest",
-                                                                                             string password = "guest")
+                                                                                             MassTransitRabbitMqHostingOptions options)
         {
-            if (!Uri.TryCreate(rabbitMqUrl, UriKind.Absolute, out var uri))
-            {
-                throw new ArgumentException($"Invalid rabbit uri: {rabbitMqUrl}", nameof(rabbitMqUrl));
-            }
-
             return services.AddMassTransitRabbitMqHostedService(o =>
                                                                 {
-                                                                    o.RabbitMqUri = uri;
-                                                                    o.Username = username;
-                                                                    o.Password = password;
+                                                                    o.RabbitMqUri = options.RabbitMqUri;
+                                                                    o.RabbitMqUsername = options.RabbitMqUsername;
+                                                                    o.RabbitMqPassword = options.RabbitMqPassword;
                                                                 });
         }
     }

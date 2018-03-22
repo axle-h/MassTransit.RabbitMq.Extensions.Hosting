@@ -3,7 +3,7 @@ using MassTransit;
 
 namespace Example.Client.Messages
 {
-    public interface ICommand : CorrelatedBy<Guid>
+    public interface IResponse : CorrelatedBy<Guid>
     {
         int Count { get; }
     }

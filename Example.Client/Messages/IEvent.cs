@@ -1,7 +1,10 @@
-﻿namespace Example.Client.Messages
+﻿using System;
+using MassTransit;
+
+namespace Example.Client.Messages
 {
-    public interface IEvent
+    public interface IEvent : CorrelatedBy<Guid>
     {
-        string Command { get; }
+        int Count { get; }
     }
 }

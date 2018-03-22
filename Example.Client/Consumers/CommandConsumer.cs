@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Example.Client.Messages;
 using MassTransit;
 using Microsoft.Extensions.Logging;
@@ -16,12 +17,21 @@ namespace Example.Client.Consumers
             _publishEndpoint = publishEndpoint;
         }
 
-        public Task Consume(ConsumeContext<ICommand> context)
+        public async Task Consume(ConsumeContext<ICommand> context)
         {
-            var msg = $"Date: {context.Message.Date:s}, Id: {context.Message.Id}";
-            _logger.LogInformation(msg);
-            _publishEndpoint.Publish<IEvent>(new {Command = msg});
-            return Task.CompletedTask;
+            _logger.LogInformation($"[Consumed-Command-{context.Message.Count}] {context.Message.CorrelationId}");
+
+            var random = new Random(context.Message.Count);
+            if (random.NextDouble() > 0.5)
+            {
+                throw new Exception("Very bad things happened");
+            }
+
+            await _publishEndpoint.Publish<IEvent>(new {context.Message.Count, context.Message.CorrelationId });
+            _logger.LogInformation($"[Produced-Event-{context.Message.Count}] {context.Message.CorrelationId}");
+
+            await context.RespondAsync<IResponse>(new {context.Message.Count, context.Message.CorrelationId });
+            _logger.LogInformation($"[Produced-Response-{context.Message.Count}] {context.Message.CorrelationId}");
         }
     }
 }

@@ -1,0 +1,6 @@
+bin
+obj
+.git
+README.md
+docker-compose.yml
+*.ps1

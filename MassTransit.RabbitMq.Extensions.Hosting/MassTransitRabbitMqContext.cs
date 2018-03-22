@@ -16,16 +16,18 @@ namespace MassTransit.RabbitMq.Extensions.Hosting
         private readonly IServiceProvider _serviceProvider;
         private readonly Lazy<Task<IBusControl>> _bus;
         private CancellationToken _cancellationToken;
-        private readonly ILogger<MassTransitRabbitMqContext> _logger;
+        private readonly ILogger _logger;
+        private readonly ILoggerFactory _loggerFactory;
 
         public MassTransitRabbitMqContext(IOptions<MassTransitRabbitMqHostingOptions> options,
                                           IMassTransitRabbitMqHostingConfigurator configurator,
                                           IServiceProvider serviceProvider,
-                                          ILogger<MassTransitRabbitMqContext> logger)
+                                          ILoggerFactory loggerFactory)
         {
             _configurator = configurator;
             _serviceProvider = serviceProvider;
-            _logger = logger;
+            _logger = loggerFactory.CreateLogger<MassTransitRabbitMqContext>();
+            _loggerFactory = loggerFactory;
             _options = options.Value;
             _bus = new Lazy<Task<IBusControl>>(GetBusAsync, LazyThreadSafetyMode.ExecutionAndPublication);
         }
@@ -65,13 +67,14 @@ namespace MassTransit.RabbitMq.Extensions.Hosting
         {
             var host = config.Host(_options.RabbitMqUri, c =>
                                                          {
-                                                             c.Username(_options.Username);
-                                                             c.Password(_options.Password);
+                                                             c.Username(_options.RabbitMqUsername);
+                                                             c.Password(_options.RabbitMqPassword);
                                                          });
 
             _configurator.Configure(config);
             _configurator.CreateReceiveEndpoints(host, _serviceProvider, config);
 
+            config.UseExtensionsLogging(_loggerFactory);
         }
 
         public void Dispose()

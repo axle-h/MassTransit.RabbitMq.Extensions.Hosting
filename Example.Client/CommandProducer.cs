@@ -8,13 +8,13 @@ using Microsoft.Extensions.Logging;
 
 namespace Example.Client
 {
-    public class MessageProducer : IHostedService
+    public class CommandProducer : IHostedService
     {
         private readonly ITypedSendEndpointProvider _typedSendEndpointProvider;
         private Timer _timer;
-        private readonly ILogger<MessageProducer> _logger;
+        private readonly ILogger<CommandProducer> _logger;
 
-        public MessageProducer(ITypedSendEndpointProvider typedSendEndpointProvider, ILogger<MessageProducer> logger)
+        public CommandProducer(ITypedSendEndpointProvider typedSendEndpointProvider, ILogger<CommandProducer> logger)
         {
             _typedSendEndpointProvider = typedSendEndpointProvider;
             _logger = logger;
@@ -23,12 +23,13 @@ namespace Example.Client
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             var endpoint = await _typedSendEndpointProvider.GetSendEndpoint<ICommand>();
+            var count = 0;
             _timer = new Timer(c =>
                                {
-                                   var msg = new {Date = DateTimeOffset.UtcNow, Id = Guid.NewGuid()};
-                                   _logger.LogInformation($"Date: {msg.Date:s}, Id: {msg.Id}");
-                                   endpoint.Send<ICommand>(msg, CancellationToken.None);
-                               }, null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
+                                   count++;
+                                   endpoint.Send<ICommand>(new { Count = count, CorrelationId = Guid.NewGuid() }, CancellationToken.None);
+                                   _logger.LogInformation($"[Produced-Command-{count}]");
+                               }, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
