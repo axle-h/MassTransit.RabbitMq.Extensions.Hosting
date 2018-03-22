@@ -16,7 +16,7 @@ namespace Example.Client.Consumers
 
         public Task Consume(ConsumeContext<IEvent> context)
         {
-            _logger.LogInformation($"[Consumed-Event-{context.Message.Count}] {context.Message.CorrelationId}");
+            _logger.LogInformation($"{context.Message.CorrelationId} Consumed-Event-{context.Message.Count}");
             return Task.CompletedTask;
         }
     }

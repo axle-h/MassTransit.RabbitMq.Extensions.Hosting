@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text.RegularExpressions;
+using GreenPipes.Configurators;
 using MassTransit.RabbitMq.Extensions.Hosting.Contracts;
 
 namespace MassTransit.RabbitMq.Extensions.Hosting.Extensions
@@ -9,8 +10,8 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Extensions
     /// </summary>
     public static class HostingBuilderExtensions
     {
-        private const string FaultQueuePostfix = "error";
-        private const string ResponseQueuePostfix = "response";
+        private const string FaultQueuePostfix = "fault";
+        private const string ErrorQueuePostfix = "error";
 
         /// <summary>
         /// Configures a send endpoint via convention.
@@ -27,7 +28,7 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Extensions
                 throw new ArgumentNullException(nameof(remoteApplicationName));
             }
 
-            return builder.WithSendEndpoint<TMessage>(GetQueueName<TMessage>(remoteApplicationName));
+            return builder.WithFireAndForgetSendEndpoint<TMessage>(GetQueueName<TMessage>(remoteApplicationName));
         }
 
         /// <summary>
@@ -36,64 +37,114 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Extensions
         /// <typeparam name="TConsumer">The type of the consumer.</typeparam>
         /// <typeparam name="TMessage">The type of the message.</typeparam>
         /// <param name="builder">The builder.</param>
+        /// <param name="retry">The optional retry configurator action.</param>
         /// <returns></returns>
-        public static IMassTransitRabbitMqHostingBuilder ConsumeByConvention<TConsumer, TMessage>(this IMassTransitRabbitMqHostingBuilder builder)
+        public static IMassTransitRabbitMqHostingBuilder ConsumeByConvention<TConsumer, TMessage>(this IMassTransitRabbitMqHostingBuilder builder,
+                                                                                                  Action<IRetryConfigurator> retry = null)
             where TConsumer : class, IConsumer<TMessage>
             where TMessage : class
-            => builder.Consume<TConsumer, TMessage>(GetQueueName<TMessage>());
+            => builder.Consume<TConsumer, TMessage>(GetQueueName<TMessage>(), retry);
 
         /// <summary>
         /// Configures a fault consumer of the specified type.
+        /// This is for subscribing to <see cref="Fault{T}"/> events when using fire-and-forget messages.
+        /// Note that send-receive messages do not publish faults.
         /// </summary>
         /// <typeparam name="TConsumer">The type of the consumer.</typeparam>
         /// <typeparam name="TMessage">The type of the message.</typeparam>
         /// <param name="builder">The builder.</param>
         /// <param name="queueName">Name of the queue.</param>
+        /// <param name="retry">The optional retry configurator action.</param>
         /// <returns></returns>
         public static IMassTransitRabbitMqHostingBuilder ConsumeFault<TConsumer, TMessage>(this IMassTransitRabbitMqHostingBuilder builder,
-                                                                                           string queueName)
+                                                                                           string queueName,
+                                                                                           Action<IRetryConfigurator> retry = null)
             where TConsumer : class, IConsumer<Fault<TMessage>>
             where TMessage : class
-            => builder.Consume<TConsumer, Fault<TMessage>>($"{queueName}_{FaultQueuePostfix}");
+            => builder.Consume<TConsumer, Fault<TMessage>>($"{queueName}_{FaultQueuePostfix}", retry);
 
         /// <summary>
         /// Configures a fault consumer of the specified type via convention.
+        /// This is for subscribing to <see cref="Fault{T}"/> events when using fire-and-forget messages.
+        /// Note that send-receive messages do not publish faults.
         /// </summary>
         /// <typeparam name="TConsumer">The type of the consumer.</typeparam>
         /// <typeparam name="TMessage">The type of the message.</typeparam>
         /// <param name="builder">The builder.</param>
+        /// <param name="retry">The optional retry configurator action.</param>
         /// <returns></returns>
-        public static IMassTransitRabbitMqHostingBuilder ConsumeFaultByConvention<TConsumer, TMessage>(this IMassTransitRabbitMqHostingBuilder builder)
+        public static IMassTransitRabbitMqHostingBuilder ConsumeFaultByConvention<TConsumer, TMessage>(this IMassTransitRabbitMqHostingBuilder builder,
+                                                                                                       Action<IRetryConfigurator> retry = null)
             where TConsumer : class, IConsumer<Fault<TMessage>>
             where TMessage : class
-            => builder.Consume<TConsumer, Fault<TMessage>>($"{GetQueueName<TMessage>()}_{FaultQueuePostfix}");
+            => builder.Consume<TConsumer, Fault<TMessage>>($"{GetQueueName<TMessage>()}_{FaultQueuePostfix}", retry);
 
         /// <summary>
-        /// Configures a response consumer of the specified type.
+        /// Configures an error consumer of the specified type.
+        /// This is MassTransit's standard for hard failed messages.
+        /// I.e. all messages that fail are routed to queues post-fixed with _error. Consume them again with this.
         /// </summary>
         /// <typeparam name="TConsumer">The type of the consumer.</typeparam>
-        /// <typeparam name="TResponseMessage">The type of the response message.</typeparam>
+        /// <typeparam name="TMessage">The type of the message.</typeparam>
         /// <param name="builder">The builder.</param>
         /// <param name="queueName">Name of the queue.</param>
+        /// <param name="retry">The optional retry configurator action.</param>
         /// <returns></returns>
-        public static IMassTransitRabbitMqHostingBuilder ConsumeResponse<TConsumer, TResponseMessage>(this IMassTransitRabbitMqHostingBuilder builder,
-                                                                                                      string queueName)
-            where TConsumer : class, IConsumer<TResponseMessage>
-            where TResponseMessage : class
-            => builder.Consume<TConsumer, TResponseMessage>($"{queueName}_{ResponseQueuePostfix}");
+        public static IMassTransitRabbitMqHostingBuilder ConsumeError<TConsumer, TMessage>(this IMassTransitRabbitMqHostingBuilder builder,
+                                                                                           string queueName,
+                                                                                           Action<IRetryConfigurator> retry = null)
+            where TConsumer : class, IConsumer<TMessage>
+            where TMessage : class
+            => builder.Consume<TConsumer, TMessage>($"{queueName}_{ErrorQueuePostfix}", retry);
 
         /// <summary>
-        /// Configures a response consumer of the specified type via convention.
+        /// Configures an error consumer of the specified type via convention.
+        /// This is MassTransit's standard for hard failed messages.
+        /// I.e. all messages that fail are routed to queues post-fixed with _error. Consume them again with this.
         /// </summary>
         /// <typeparam name="TConsumer">The type of the consumer.</typeparam>
-        /// <typeparam name="TOriginalMessage">The type of the original message.</typeparam>
-        /// <typeparam name="TResponseMessage">The type of the response message.</typeparam>
+        /// <typeparam name="TMessage">The type of the message.</typeparam>
         /// <param name="builder">The builder.</param>
+        /// <param name="remoteApplicationName">Name of the remote application.</param>
+        /// <param name="retry">The optional retry configurator action.</param>
         /// <returns></returns>
-        public static IMassTransitRabbitMqHostingBuilder ConsumeResponseByConvention<TConsumer, TOriginalMessage, TResponseMessage>(this IMassTransitRabbitMqHostingBuilder builder)
-            where TConsumer : class, IConsumer<TResponseMessage>
-            where TResponseMessage : class
-            => builder.Consume<TConsumer, TResponseMessage>($"{GetQueueName<TOriginalMessage>()}_{ResponseQueuePostfix}");
+        public static IMassTransitRabbitMqHostingBuilder ConsumeErrorByConvention<TConsumer, TMessage>(this IMassTransitRabbitMqHostingBuilder builder,
+                                                                                                       string remoteApplicationName,
+                                                                                                       Action<IRetryConfigurator> retry = null)
+            where TConsumer : class, IConsumer<TMessage>
+            where TMessage : class
+        {
+            if (string.IsNullOrEmpty(remoteApplicationName))
+            {
+                // Who would listen to errors on the same microservice.. right?
+                throw new ArgumentNullException(nameof(remoteApplicationName));
+            }
+
+            return builder.Consume<TConsumer, TMessage>($"{GetQueueName<TMessage>(remoteApplicationName)}_{ErrorQueuePostfix}", retry);
+        }
+
+        /// <summary>
+        /// Configures a send endpoint and a timeout for responses via convention.
+        /// </summary>
+        /// <typeparam name="TRequest">The type of the request.</typeparam>
+        /// <typeparam name="TResponse">The type of the response.</typeparam>
+        /// <param name="builder">The builder.</param>
+        /// <param name="remoteApplicationName">Name of the remote application.</param>
+        /// <param name="defaultTimeout">The default timeout.</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException">remoteApplicationName</exception>
+        public static IMassTransitRabbitMqHostingBuilder WithRequestResponseSendEndpointByConvention<TRequest, TResponse>(this IMassTransitRabbitMqHostingBuilder builder,
+                                                                                                                          string remoteApplicationName,
+                                                                                                                          TimeSpan? defaultTimeout = null)
+        {
+            if (string.IsNullOrEmpty(remoteApplicationName))
+            {
+                throw new ArgumentNullException(nameof(remoteApplicationName));
+            }
+
+            return builder.WithRequestResponseSendEndpoint<TRequest, TResponse>(GetQueueName<TRequest>(remoteApplicationName), defaultTimeout);
+        }
+
 
         private static string GetQueueName<TMessage>(string applicationName = null)
         {

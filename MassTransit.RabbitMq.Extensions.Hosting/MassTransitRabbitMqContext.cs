@@ -67,7 +67,7 @@ namespace MassTransit.RabbitMq.Extensions.Hosting
 
             return _bus.Value;
         }
-
+        
         private async Task<IBusControl> GetBusAsync()
         {
             while (true)
@@ -99,6 +99,7 @@ namespace MassTransit.RabbitMq.Extensions.Hosting
             _configurator.CreateReceiveEndpoints(host, _serviceProvider, config);
 
             config.UseExtensionsLogging(_loggerFactory);
+            config.UseBsonSerializer(); // BSON by default. Because why not.
         }
 
         /// <summary>

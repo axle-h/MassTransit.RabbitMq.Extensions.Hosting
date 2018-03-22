@@ -23,14 +23,15 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Extensions
                 throw new ArgumentNullException(nameof(applicationName));
             }
 
-            ApplicationConstants.Name = applicationName.ToLower();
+            ApplicationConstants.Name = applicationName.ToSnailCase();
             services.Configure(configure);
 
             var builder = new MassTransitRabbitMqHostingBuilder(services);
-            services.AddSingleton<IMassTransitRabbitMqHostingConfigurator>(builder);
+            services.AddSingleton(c => builder.BuildConfigurator());
+            services.AddSingleton(c => builder.BuildSendEndpointRepository());
 
             // This is the hosted service, i.e. the thing that makes sure the bus is started and stopped with the application.
-            services.AddScoped<Microsoft.Extensions.Hosting.IHostedService, MassTransitRabbitMqHostedService>();
+            services.AddSingleton<Microsoft.Extensions.Hosting.IHostedService, MassTransitRabbitMqHostedService>();
 
             // We have to manage the bus via a context just in cast this service starts before RabbitMQ.
             services.AddSingleton<IMassTransitRabbitMqContext, MassTransitRabbitMqContext>();

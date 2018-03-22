@@ -8,6 +8,7 @@ namespace Example.Client.Consumers
 {
     public class CommandConsumer : IConsumer<ICommand>
     {
+        private static readonly Random Random = new Random();
         private readonly ILogger<CommandConsumer> _logger;
         private readonly IPublishEndpoint _publishEndpoint;
 
@@ -19,19 +20,19 @@ namespace Example.Client.Consumers
 
         public async Task Consume(ConsumeContext<ICommand> context)
         {
-            _logger.LogInformation($"[Consumed-Command-{context.Message.Count}] {context.Message.CorrelationId}");
-
-            var random = new Random(context.Message.Count);
-            if (random.NextDouble() > 0.5)
+            if (Random.NextDouble() > 0.4)
             {
+                _logger.LogWarning($"{context.Message.CorrelationId} Consumed-Command-Failed-{context.Message.Count}");
                 throw new Exception("Very bad things happened");
             }
 
+            _logger.LogInformation($"{context.Message.CorrelationId} Consumed-Command-{context.Message.Count}");
+
             await _publishEndpoint.Publish<IEvent>(new {context.Message.Count, context.Message.CorrelationId });
-            _logger.LogInformation($"[Produced-Event-{context.Message.Count}] {context.Message.CorrelationId}");
+            _logger.LogInformation($"{context.Message.CorrelationId} Produced-Event-{context.Message.Count}");
 
             await context.RespondAsync<IResponse>(new {context.Message.Count, context.Message.CorrelationId });
-            _logger.LogInformation($"[Produced-Response-{context.Message.Count}] {context.Message.CorrelationId}");
+            _logger.LogInformation($"{context.Message.CorrelationId} Produced-Response-{context.Message.Count}");
         }
     }
 }

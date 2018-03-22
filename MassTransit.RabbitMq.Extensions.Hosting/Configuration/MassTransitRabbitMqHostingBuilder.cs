@@ -1,23 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using GreenPipes.Configurators;
 using MassTransit.RabbitMq.Extensions.Hosting.Contracts;
 using MassTransit.RabbitMqTransport;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace MassTransit.RabbitMq.Extensions.Hosting.Configuration
 {
     /// <summary>
-    /// MassTransit builder and configurator.
+    /// MassTransit config builder.
+    /// This should be used to configure receive endpoints, consumers and the host itself.
+    /// It will be used to construct <see cref="IMassTransitRabbitMqHostingConfigurator"/> and <see cref="IMassTransitRabbitMqEndpointRepository"/>.
     /// </summary>
-    /// <seealso cref="MassTransit.RabbitMq.Extensions.Hosting.Contracts.IMassTransitRabbitMqHostingBuilder" />
-    /// <seealso cref="MassTransit.RabbitMq.Extensions.Hosting.Contracts.IMassTransitRabbitMqHostingConfigurator" />
-    public class MassTransitRabbitMqHostingBuilder : IMassTransitRabbitMqHostingBuilder, IMassTransitRabbitMqHostingConfigurator
+    /// <seealso cref="IMassTransitRabbitMqHostingBuilder" />
+    public class MassTransitRabbitMqHostingBuilder : IMassTransitRabbitMqHostingBuilder
     {
-        private readonly IServiceCollection _services;
-        private readonly IDictionary<string, ICollection<Type>> _receivers;
+
+        private static readonly TimeSpan GlobalDefaultTimeout = TimeSpan.FromSeconds(30);
+        private readonly IDictionary<string, ReceiverConfiguration> _receivers;
         private readonly ICollection<Action<IRabbitMqBusFactoryConfigurator>> _configurators;
         private readonly IDictionary<Type, string> _sendEndpoints;
+        private readonly IDictionary<Type, TimeSpan> _responseTimeouts;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MassTransitRabbitMqHostingBuilder"/> class.
@@ -25,11 +29,21 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Configuration
         /// <param name="services">The services.</param>
         public MassTransitRabbitMqHostingBuilder(IServiceCollection services)
         {
-            _services = services;
-            _receivers = new Dictionary<string, ICollection<Type>>(StringComparer.OrdinalIgnoreCase);
+            Services = services;
+            _receivers = new Dictionary<string, ReceiverConfiguration>(StringComparer.OrdinalIgnoreCase);
             _configurators = new List<Action<IRabbitMqBusFactoryConfigurator>>();
             _sendEndpoints = new Dictionary<Type, string>();
+            _responseTimeouts = new Dictionary<Type, TimeSpan>();
         }
+
+        internal IMassTransitRabbitMqHostingConfigurator BuildConfigurator() => new MassTransitRabbitMqHostingConfigurator(_receivers, _configurators, _sendEndpoints);
+
+        internal IMassTransitRabbitMqEndpointRepository BuildSendEndpointRepository() => new MassTransitRabbitMqEndpointRepository(_sendEndpoints, _responseTimeouts);
+
+        /// <summary>
+        /// Gets the services.
+        /// </summary>
+        public IServiceCollection Services { get; }
 
         /// <summary>
         /// Registers the specified action to be run on the RabbitMQ MassTransit bus factory.
@@ -54,25 +68,36 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Configuration
         /// <typeparam name="TConsumer">The type of the consumer.</typeparam>
         /// <typeparam name="TMessage">The type of the message.</typeparam>
         /// <param name="queueName">Name of the queue.</param>
+        /// <param name="retry">The optional retry configurator action.</param>
         /// <returns></returns>
-        public IMassTransitRabbitMqHostingBuilder Consume<TConsumer, TMessage>(string queueName)
+        public IMassTransitRabbitMqHostingBuilder Consume<TConsumer, TMessage>(string queueName, Action<IRetryConfigurator> retry = null)
             where TConsumer : class, IConsumer<TMessage>
             where TMessage : class
         {
-            _services.AddTransient<TConsumer>();
+            Services.TryAddTransient<TConsumer>();
 
-            ICollection<Type> list;
+            ReceiverConfiguration config;
             if (_receivers.ContainsKey(queueName))
             {
-                list = _receivers[queueName];
+                config = _receivers[queueName];
             }
             else
             {
-                list = new List<Type>();
-                _receivers.Add(queueName, list);
+                config = new ReceiverConfiguration();
+                _receivers.Add(queueName, config);
             }
 
-            list.Add(typeof(TConsumer));
+            config.Types.Add(typeof(TConsumer));
+            if (retry != null)
+            {
+                if (config.RetryConfigurator != null)
+                {
+                    throw new ArgumentException("Retry policy already configured for queue: " + queueName, nameof(retry));
+                }
+
+                config.RetryConfigurator = retry;
+            }
+
             return this;
         }
 
@@ -84,7 +109,7 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Configuration
         /// <returns></returns>
         /// <exception cref="ArgumentNullException">queueName</exception>
         /// <exception cref="ArgumentException">TMessage</exception>
-        public IMassTransitRabbitMqHostingBuilder WithSendEndpoint<TMessage>(string queueName)
+        public IMassTransitRabbitMqHostingBuilder WithFireAndForgetSendEndpoint<TMessage>(string queueName)
         {
             if (string.IsNullOrEmpty(queueName))
             {
@@ -93,7 +118,7 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Configuration
 
             if (_sendEndpoints.ContainsKey(typeof(TMessage)))
             {
-                throw new ArgumentException($"Type already added: {typeof(TMessage)}", nameof(TMessage));
+                throw new ArgumentException($"Request type already added: {typeof(TMessage)}", nameof(TMessage));
             }
 
             _sendEndpoints.Add(typeof(TMessage), queueName.TrimStart('/'));
@@ -101,75 +126,25 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Configuration
         }
 
         /// <summary>
-        /// Creates all configured receive endpoints using the specified host and service provider.
+        /// Configures the specified send endpoint with response topology i.e. queues setup to receive responses.
+        /// To use this endpoint inject <see cref="IConfiguredSendEndpointProvider" /> and call <see cref="IConfiguredSendEndpointProvider.GetRequestClient{TRequest, TResponse}" />.
         /// </summary>
-        /// <param name="host">The host.</param>
-        /// <param name="provider">The provider.</param>
-        /// <param name="configure">The configure.</param>
-        public void CreateReceiveEndpoints(IRabbitMqHost host, IServiceProvider provider, IRabbitMqBusFactoryConfigurator configure)
-        {
-            foreach (var kvp in _receivers)
-            {
-                configure.ReceiveEndpoint(host, kvp.Key, c =>
-                                                         {
-                                                             foreach (var type in kvp.Value)
-                                                             {
-                                                                 c.Consumer(type, provider.GetRequiredService);
-                                                             }
-                                                         });
-            }
-        }
-
-        /// <summary>
-        /// Runs all configured bus factory actions.
-        /// </summary>
-        /// <param name="configurator">The configurator.</param>
-        public void Configure(IRabbitMqBusFactoryConfigurator configurator)
-        {
-            foreach (var action in _configurators)
-            {
-                action(configurator);
-            }
-        }
-
-        /// <summary>
-        /// Gets the send endpoint path for the specified message type.
-        /// </summary>
-        /// <typeparam name="TMessage">The type of the message.</typeparam>
+        /// <typeparam name="TRequest">The type of the request.</typeparam>
+        /// <typeparam name="TResponse">The type of the response.</typeparam>
+        /// <param name="requestQueueName">Name of the request queue.</param>
+        /// <param name="defaultTimeout">The optional default timeout. If not provided a global default will be used.</param>
         /// <returns></returns>
-        /// <exception cref="ArgumentException">TMessage</exception>
-        public string GetSendEndpointPath<TMessage>()
+        public IMassTransitRabbitMqHostingBuilder WithRequestResponseSendEndpoint<TRequest, TResponse>(string requestQueueName, TimeSpan? defaultTimeout = null)
         {
-            if (!_sendEndpoints.ContainsKey(typeof(TMessage)))
+            WithFireAndForgetSendEndpoint<TRequest>(requestQueueName);
+            
+            if (_responseTimeouts.ContainsKey(typeof(TResponse)))
             {
-                throw new ArgumentException($"Type not configured: {typeof(TMessage)}", nameof(TMessage));
+                throw new ArgumentException($"Response type already added: {typeof(TResponse)}", nameof(TResponse));
             }
 
-            return _sendEndpoints[typeof(TMessage)];
-        }
-
-        /// <summary>
-        /// Gets a set of string that represent this configuration for logging.
-        /// </summary>
-        /// <returns></returns>
-        public IEnumerable<string> GetConfigurationStrings()
-        {
-            string GetMessageType(Type consumerType)
-            {
-                var consumerInterface = consumerType.GetInterfaces()
-                                                    .First(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IConsumer<>));
-                var messageType = consumerInterface.GetGenericArguments().First();
-                if (messageType.IsGenericType && messageType.GetGenericTypeDefinition() == typeof(Fault<>))
-                {
-                    messageType =  messageType.GetGenericArguments().First();
-                }
-
-                return messageType.Name;
-            }
-
-            var receivers = _receivers.Select(kvp => $"Receiving {string.Join(" and ", kvp.Value.Select(GetMessageType))} on {kvp.Key}");
-            var sendEndpoints = _sendEndpoints.Select(kvp => $"Sending {kvp.Key.Name} to {kvp.Value}");
-            return receivers.Concat(sendEndpoints);
+            _responseTimeouts.Add(typeof(TResponse), defaultTimeout ?? GlobalDefaultTimeout);
+            return this;
         }
     }
 }

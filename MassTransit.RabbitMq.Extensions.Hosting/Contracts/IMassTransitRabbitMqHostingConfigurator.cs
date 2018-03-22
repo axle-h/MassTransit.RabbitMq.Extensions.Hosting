@@ -24,13 +24,6 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Contracts
         void Configure(IRabbitMqBusFactoryConfigurator configurator);
 
         /// <summary>
-        /// Gets the send endpoint path for the specified message type.
-        /// </summary>
-        /// <typeparam name="TMessage">The type of the message.</typeparam>
-        /// <returns></returns>
-        string GetSendEndpointPath<TMessage>();
-
-        /// <summary>
         /// Gets a set of string that represent this configuration for logging.
         /// </summary>
         /// <returns></returns>
