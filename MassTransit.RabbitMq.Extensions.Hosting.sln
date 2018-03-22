@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27428.2011
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MassTransit.RabbitMq.Extensions.Hosting", "MassTransit.RabbitMq.Extensions.Hosting\MassTransit.RabbitMq.Extensions.Hosting.csproj", "{3ABCB153-AEA9-41C9-B05C-B300E066DF80}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MassTransit.RabbitMq.Extensions.Hosting", "MassTransit.RabbitMq.Extensions.Hosting\MassTransit.RabbitMq.Extensions.Hosting.csproj", "{3ABCB153-AEA9-41C9-B05C-B300E066DF80}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Example.Client", "Example.Client\Example.Client.csproj", "{9237D138-C32C-4C25-933F-FA7E6250F0DA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{3ABCB153-AEA9-41C9-B05C-B300E066DF80}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3ABCB153-AEA9-41C9-B05C-B300E066DF80}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3ABCB153-AEA9-41C9-B05C-B300E066DF80}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9237D138-C32C-4C25-933F-FA7E6250F0DA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9237D138-C32C-4C25-933F-FA7E6250F0DA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9237D138-C32C-4C25-933F-FA7E6250F0DA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9237D138-C32C-4C25-933F-FA7E6250F0DA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
