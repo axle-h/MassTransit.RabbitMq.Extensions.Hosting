@@ -10,19 +10,19 @@ namespace Example.Client
 {
     public class CommandProducer : IHostedService
     {
-        private readonly ITypedSendEndpointProvider _typedSendEndpointProvider;
+        private readonly IConfiguredSendEndpointProvider _configuredSendEndpointProvider;
         private Timer _timer;
         private readonly ILogger<CommandProducer> _logger;
 
-        public CommandProducer(ITypedSendEndpointProvider typedSendEndpointProvider, ILogger<CommandProducer> logger)
+        public CommandProducer(IConfiguredSendEndpointProvider configuredSendEndpointProvider, ILogger<CommandProducer> logger)
         {
-            _typedSendEndpointProvider = typedSendEndpointProvider;
+            _configuredSendEndpointProvider = configuredSendEndpointProvider;
             _logger = logger;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            var endpoint = await _typedSendEndpointProvider.GetSendEndpoint<ICommand>();
+            var endpoint = await _configuredSendEndpointProvider.GetSendEndpoint<ICommand>();
             var count = 0;
             _timer = new Timer(c =>
                                {

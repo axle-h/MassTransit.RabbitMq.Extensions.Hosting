@@ -37,26 +37,26 @@ namespace Example.Client
                                                     var massTransitOptions = context.Configuration.GetMassTransitOptionsConnectionString();
                                                     
                                                     // Create builder. Bother server and client will consume the events.
-                                                    var builder = services.AddMassTransitRabbitMqHostedService(massTransitOptions);
+                                                    var builder = services.AddMassTransitRabbitMqHostedService(mode, massTransitOptions);
 
                                                     switch (mode)
                                                     {
                                                         case "server":
                                                             // Only server consumes the commands.
-                                                            builder.Consume<CommandConsumer, ICommand>("example_command");
+                                                            builder.ConsumeByConvention<CommandConsumer, ICommand>();
                                                             break;
 
                                                         case "client":
                                                             // Client will produce commands and then listen for responses.
                                                             services.AddScoped<IHostedService, CommandProducer>();
-                                                            builder.WithSendEndpoint<ICommand>("example_command")
-                                                                   .Consume<ResponseConsumer, IResponse>("example_command_response")
-                                                                   .ConsumeFault<CommandFailedConsumer, ICommand>("example_command");
+                                                            builder.WithSendEndpointByConvention<ICommand>("server")
+                                                                   .ConsumeResponseByConvention<ResponseConsumer, ICommand, IResponse>()
+                                                                   .ConsumeFaultByConvention<CommandFailedConsumer, ICommand>();
                                                             break;
 
                                                         case "audit":
                                                             // Audit system only listens for events.
-                                                            builder.Consume<EventConsumer, IEvent>("example_event_audit");
+                                                            builder.ConsumeByConvention<EventConsumer, IEvent>();
                                                             break;
 
                                                         default:

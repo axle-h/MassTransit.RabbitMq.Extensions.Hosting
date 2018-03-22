@@ -7,9 +7,23 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Extensions
 {
     public static class ServiceCollectionExtensions
     {
+        /// <summary>
+        /// Adds the MassTransit backed by RabbitMQ as a hosted service.
+        /// </summary>
+        /// <param name="services">The services.</param>
+        /// <param name="applicationName">Name of the application.</param>
+        /// <param name="configure">The configure action.</param>
+        /// <returns></returns>
         public static IMassTransitRabbitMqHostingBuilder AddMassTransitRabbitMqHostedService(this IServiceCollection services,
+                                                                                             string applicationName,
                                                                                              Action<MassTransitRabbitMqHostingOptions> configure)
         {
+            if (string.IsNullOrEmpty(applicationName))
+            {
+                throw new ArgumentNullException(nameof(applicationName));
+            }
+
+            ApplicationConstants.Name = applicationName.ToLower();
             services.Configure(configure);
 
             var builder = new MassTransitRabbitMqHostingBuilder(services);
@@ -32,15 +46,23 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Extensions
 
             // Consume this to send commands to endpoints by the type.
             // You must have called IMassTransitRabbitMqHostingBuilder.WithSendEndpoint<TMessage> in order to use this for type TMessage.
-            services.AddTransient<ITypedSendEndpointProvider, TypedSendEndpointProvider>();
+            services.AddTransient<IConfiguredSendEndpointProvider, ConfiguredSendEndpointProvider>();
 
             return builder;
         }
 
+        /// <summary>
+        /// Adds the MassTransit backed by RabbitMQ as a hosted service.
+        /// </summary>
+        /// <param name="services">The services.</param>
+        /// <param name="applicationName">Name of the application.</param>
+        /// <param name="options">The mass transit options.</param>
+        /// <returns></returns>
         public static IMassTransitRabbitMqHostingBuilder AddMassTransitRabbitMqHostedService(this IServiceCollection services,
+                                                                                             string applicationName,
                                                                                              MassTransitRabbitMqHostingOptions options)
         {
-            return services.AddMassTransitRabbitMqHostedService(o =>
+            return services.AddMassTransitRabbitMqHostedService(applicationName, o =>
                                                                 {
                                                                     o.RabbitMqUri = options.RabbitMqUri;
                                                                     o.RabbitMqUsername = options.RabbitMqUsername;

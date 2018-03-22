@@ -2,6 +2,9 @@
 
 namespace MassTransit.RabbitMq.Extensions.Hosting.Configuration
 {
+    /// <summary>
+    /// Options for connecting to RabbitMQ for MassTransit.
+    /// </summary>
     public class MassTransitRabbitMqHostingOptions
     {
         /// <summary>

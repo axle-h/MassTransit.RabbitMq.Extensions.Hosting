@@ -9,6 +9,10 @@ using Microsoft.Extensions.Options;
 
 namespace MassTransit.RabbitMq.Extensions.Hosting
 {
+    /// <summary>
+    /// A singleton context for managing the MassTransit bus.
+    /// </summary>
+    /// <seealso cref="MassTransit.RabbitMq.Extensions.Hosting.Contracts.IMassTransitRabbitMqContext" />
     public class MassTransitRabbitMqContext : IMassTransitRabbitMqContext
     {
         private readonly MassTransitRabbitMqHostingOptions _options;
@@ -19,6 +23,13 @@ namespace MassTransit.RabbitMq.Extensions.Hosting
         private readonly ILogger _logger;
         private readonly ILoggerFactory _loggerFactory;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MassTransitRabbitMqContext"/> class.
+        /// </summary>
+        /// <param name="options">The options.</param>
+        /// <param name="configurator">The configurator.</param>
+        /// <param name="serviceProvider">The service provider.</param>
+        /// <param name="loggerFactory">The logger factory.</param>
         public MassTransitRabbitMqContext(IOptions<MassTransitRabbitMqHostingOptions> options,
                                           IMassTransitRabbitMqHostingConfigurator configurator,
                                           IServiceProvider serviceProvider,
@@ -30,8 +41,21 @@ namespace MassTransit.RabbitMq.Extensions.Hosting
             _loggerFactory = loggerFactory;
             _options = options.Value;
             _bus = new Lazy<Task<IBusControl>>(GetBusAsync, LazyThreadSafetyMode.ExecutionAndPublication);
+
+            foreach (var s in configurator.GetConfigurationStrings())
+            {
+                _logger.LogInformation(s);
+            }
         }
 
+        /// <summary>
+        /// Gets the configured MassTransit bus control.
+        /// </summary>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns></returns>
+        /// <remarks>
+        /// This will never complete if RabbitMQ is not up.
+        /// </remarks>
         public Task<IBusControl> GetBusControlAsync(CancellationToken cancellationToken = default)
         {
             if (!_bus.IsValueCreated && cancellationToken != default && _cancellationToken == default)
@@ -77,6 +101,9 @@ namespace MassTransit.RabbitMq.Extensions.Hosting
             config.UseExtensionsLogging(_loggerFactory);
         }
 
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
         public void Dispose()
         {
             if (!_bus.IsValueCreated || !_bus.Value.IsCompleted)

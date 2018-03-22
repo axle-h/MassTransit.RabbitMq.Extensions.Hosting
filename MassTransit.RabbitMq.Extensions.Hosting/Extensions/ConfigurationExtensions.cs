@@ -1,6 +1,5 @@
 ﻿using System;
 using MassTransit.RabbitMq.Extensions.Hosting.Configuration;
-using MassTransit.RabbitMq.Extensions.Hosting.Contracts;
 using Microsoft.Extensions.Configuration;
 using RabbitMQ.Client;
 
@@ -8,12 +7,24 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Extensions
 {
     public static class ConfigurationExtensions
     {
+        /// <summary>
+        /// Reads <see cref="MassTransitRabbitMqHostingOptions"/> from the specified configuration with section binding.
+        /// </summary>
+        /// <param name="configuration">The configuration.</param>
+        /// <param name="section">The section.</param>
+        /// <returns></returns>
         public static MassTransitRabbitMqHostingOptions GetMassTransitOptionsSection(this IConfiguration configuration,
                                                                                      string section = "MassTransit")
         {
             return configuration.GetSection(section).Get<MassTransitRabbitMqHostingOptions>();
         }
 
+        /// <summary>
+        /// Reads <see cref="MassTransitRabbitMqHostingOptions"/> from the specified configuration with a RabbitMQ (amqp://) connection string.
+        /// </summary>
+        /// <param name="configuration">The configuration.</param>
+        /// <param name="connectionStringName">Name of the connection string.</param>
+        /// <returns></returns>
         public static MassTransitRabbitMqHostingOptions GetMassTransitOptionsConnectionString(this IConfiguration configuration,
                                                                                               string connectionStringName = "rabbitmq")
         {
@@ -52,21 +63,5 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Extensions
                        RabbitMqPassword = factory.Password
                    };
         }
-
-        public static IMassTransitRabbitMqHostingBuilder WithTypeConventionSendEndpoint<TMessage>(this IMassTransitRabbitMqHostingBuilder builder)
-            => builder.WithSendEndpoint<TMessage>(GetQueueName<TMessage>());
-
-        public static IMassTransitRabbitMqHostingBuilder ConsumeWithTypeConvention<TConsumer, TMessage>(this IMassTransitRabbitMqHostingBuilder builder)
-            where TConsumer : class, IConsumer<TMessage>
-            where TMessage : class
-            => builder.Consume<TConsumer, TMessage>(GetQueueName<TMessage>());
-
-        public static IMassTransitRabbitMqHostingBuilder ConsumeFault<TConsumer, TMessage>(this IMassTransitRabbitMqHostingBuilder builder,
-                                                                                           string queueName)
-            where TConsumer : class, IConsumer<Fault<TMessage>>
-            where TMessage : class
-            => builder.Consume<TConsumer, Fault<TMessage>>(queueName + "_error");
-
-        private static string GetQueueName<TMessage>() => $"Queue.{typeof(TMessage)}";
     }
 }
