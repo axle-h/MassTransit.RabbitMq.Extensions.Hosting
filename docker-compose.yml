@@ -1,7 +1,7 @@
 version: '2.2'
 services:
   client:
-    build: .
+    build: ./example/Example.Client
     scale: 2
     depends_on:
       - rabbitmq
@@ -9,7 +9,7 @@ services:
       - MODE=client
       - CONNECTIONSTRINGS__RABBITMQ=amqp://guest:guest@rabbitmq
   server:
-    build: .
+    build: ./example/Example.Client
     scale: 2
     depends_on:
       - rabbitmq
@@ -17,7 +17,7 @@ services:
       - MODE=server
       - CONNECTIONSTRINGS__RABBITMQ=amqp://guest:guest@rabbitmq
   audit:
-    build: .
+    build: ./example/Example.Client
     scale: 2
     depends_on:
       - rabbitmq

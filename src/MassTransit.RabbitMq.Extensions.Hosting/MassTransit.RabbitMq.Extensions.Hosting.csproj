@@ -2,7 +2,18 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>7.1</LangVersion>
+    <Title>MassTransit.RabbitMq.Extensions.Hosting</Title>
+    <PackageId>MassTransit.RabbitMq.Extensions.Hosting</PackageId>
+    <Authors>Alex Haslehurst</Authors>
+    <Description>MassTransit configuration extensions for Microsoft.Extensions.DependencyInjection using Microsoft.Extensions.Hosting.IHostedService and RabbitMQ</Description>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageTags>masstransit rabbitmq</PackageTags>
+    <IncludeSymbols>true</IncludeSymbols>
+    <IncludeSource>true</IncludeSource>
+    <PackageProjectUrl>https://github.com/axle-h/MassTransit.RabbitMq.Extensions.Hosting</PackageProjectUrl>
+    <IsPackable>true</IsPackable>
+    <OutputType>Library</OutputType>
   </PropertyGroup>
 
   <ItemGroup>
