@@ -12,29 +12,56 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Build package
+          name: Build packages
           command: |
             export VERSION="${VERSION_PREFIX}.${CIRCLE_BUILD_NUM}"
             dotnet pack -c Release -o ../../artifacts src/MassTransit.RabbitMq.Extensions.Hosting /p:PackageVersion=$VERSION /p:Version=$VERSION  /p:AssemblyVersion=$VERSION
+            dotnet pack -c Release -o ../../artifacts src/MassTransit.RabbitMq.Extensions.Hosting.Dummy /p:PackageVersion=$VERSION /p:Version=$VERSION  /p:AssemblyVersion=$VERSION
+      - run:
+          name: Build integration tests
+          command: |
+            dotnet publish -c Release -o bin/publish tests/Integration.Client
+            dotnet publish -c Release -o bin/publish tests/Integration.Server
       - persist_to_workspace:
           root: ~/app
           paths: .
+
+  integration-tests:
+    docker:
+      - image: docker/compose:1.20.1
+    working_directory: ~/app
+    steps:
+      - attach_workspace:
+          at: ~/app
+      - setup_remote_docker
+      - run:
+          name: Run integration tests
+          command: docker-compose -f docker-compose.integration.yml up --build --remove-orphans --force-recreate --abort-on-container-exit --exit-code-from newman
 
   publish:
     <<: *netcore
     steps:
       - attach_workspace:
           at: ~/app
-      - run: dotnet nuget push artifacts/*.nupkg --api-key $NUGET_API_KEY --source https://api.nuget.org/v3/index.json
+      - run:
+          name: Push assembly packages to NuGet
+          command: |
+            for artifact in `ls artifacts/*.nupkg | grep -v symbols\.nupkg$`; \
+            do \
+              dotnet nuget push $artifact --api-key $NUGET_API_KEY --source https://api.nuget.org/v3/index.json; \
+            done
 
 workflows:
   version: 2
   build-test-publish:
     jobs:
       - build
-      - publish:
+      - integration-tests:
           requires:
             - build
+      - publish:
+          requires:
+            - integration-tests
           filters:
             branches:
               only: master

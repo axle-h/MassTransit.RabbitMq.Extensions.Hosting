@@ -1,0 +1,26 @@
+version: '2'
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "15672:15672"
+
+  client:
+    build: ./tests/Integration.Client
+    depends_on:
+      - rabbitmq
+    environment:
+      - CONNECTIONSTRINGS__RABBITMQ=amqp://guest:guest@rabbitmq
+
+  server:
+    build: ./tests/Integration.Server
+    depends_on:
+      - rabbitmq
+    environment:
+      - CONNECTIONSTRINGS__RABBITMQ=amqp://guest:guest@rabbitmq
+
+  newman:
+    build: ./tests/Newman
+    depends_on:
+      - client
+      - server

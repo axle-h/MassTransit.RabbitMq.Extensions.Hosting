@@ -1,0 +1,122 @@
+{
+	"info": {
+		"_postman_id": "2cf0eb8f-16ea-4c6d-afae-e4dea64d483a",
+		"name": "mass-transit",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Get published command",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "a1e7b368-ca0f-42c1-aee6-fddd4fd3d7fa",
+						"type": "text/javascript",
+						"exec": [
+							"pm.test(\"response is ok\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"response should be json\", function () { ",
+							"    pm.response.to.be.json;",
+							"});",
+							"",
+							"pm.test(\"response should have publishedDate\", function () { ",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property(\"publishedDate\").that.is.not.empty;",
+							"});",
+							"",
+							"pm.test(\"response should have bs\", function () { ",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property(\"bs\").that.is.not.empty;",
+							"});",
+							"",
+							"pm.test(\"response should have correlationId\", function () { ",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property(\"correlationId\").that.is.not.empty;",
+							"",
+							"    // save entire message for next requests.",
+							"    pm.environment.set(\"published_message\", jsonData);",
+							"});"
+						]
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"id": "81b55054-1eeb-4596-b99b-3396d4ad5774",
+						"type": "text/javascript",
+						"exec": [
+							"// Give it 10s to fire up.",
+							"setTimeout(function(){}, 10000);"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"url": {
+					"raw": "{{client}}/api/messages/published/integration_contracts_some_command",
+					"host": [
+						"{{client}}"
+					],
+					"path": [
+						"api",
+						"messages",
+						"published",
+						"integration_contracts_some_command"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get consumed command",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "b64408e9-366f-483f-9c51-f1a5da63a934",
+						"type": "text/javascript",
+						"exec": [
+							"pm.test(\"response is ok\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"response should be json\", function () { ",
+							"    pm.response.to.be.json;",
+							"});",
+							"",
+							"pm.test(\"response should be same as the published message\", function () { ",
+							"    var jsonData = pm.response.json();",
+							"    var expected = pm.environment.get(\"published_message\");",
+							"    pm.expect(jsonData).to.be.deep.equal(expected);",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"url": {
+					"raw": "{{server}}/api/messages/consumed/integration_contracts_some_command",
+					"host": [
+						"{{server}}"
+					],
+					"path": [
+						"api",
+						"messages",
+						"consumed",
+						"integration_contracts_some_command"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

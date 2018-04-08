@@ -1,4 +1,5 @@
 ﻿using System;
+using Humanizer;
 using MassTransit.RabbitMq.Extensions.Hosting.Configuration;
 using MassTransit.RabbitMq.Extensions.Hosting.Contracts;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,7 +26,7 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Extensions
 
             services.Configure(configure);
 
-            var builder = new MassTransitRabbitMqHostingBuilder(services, applicationName.ToSnailCase());
+            var builder = new MassTransitRabbitMqHostingBuilder(services, applicationName.Underscore());
             services.AddSingleton(c => builder.BuildConfigurator());
             services.AddSingleton(c => builder.BuildSendEndpointRepository());
 
@@ -36,13 +37,13 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Extensions
             services.AddSingleton<IMassTransitRabbitMqContext, MassTransitRabbitMqContext>();
 
             // I don't known where we'd consume this but I'm registering it for convenience as below.
-            services.AddSingleton(c => c.GetRequiredService<IMassTransitRabbitMqContext>().GetBusControlAsync().ConfigureAwait(false).GetAwaiter().GetResult());
+            services.AddTransient(c => c.GetRequiredService<IMassTransitRabbitMqContext>().GetBusControlAsync().ConfigureAwait(false).GetAwaiter().GetResult());
 
             // Consume this to publish events.
-            services.AddSingleton<IPublishEndpoint>(c => c.GetRequiredService<IBusControl>());
+            services.AddTransient<IPublishEndpoint>(c => c.GetRequiredService<IBusControl>());
 
             // Consume this to send commands to specific endpoints.
-            services.AddSingleton<ISendEndpointProvider>(c => c.GetRequiredService<IBusControl>());
+            services.AddTransient<ISendEndpointProvider>(c => c.GetRequiredService<IBusControl>());
 
             // Consume this to send commands to endpoints by the type.
             // You must have called IMassTransitRabbitMqHostingBuilder.WithSendEndpoint<TMessage> in order to use this for type TMessage.

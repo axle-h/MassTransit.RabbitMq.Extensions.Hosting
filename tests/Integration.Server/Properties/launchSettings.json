@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "MassTransit.RabbitMq.Extensions.Hosting.Integration": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "http://localhost:11300/"
+    }
+  }
+}

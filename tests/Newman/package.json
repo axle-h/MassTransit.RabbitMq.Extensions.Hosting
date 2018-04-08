@@ -1,0 +1,11 @@
+{
+    "name": "mass-transit-integration-tests",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+      "test": "newman run mass-transit.postman_collection.json -e mass-transit.postman_environment.json --timeout-request 30000"
+    },
+    "author": "",
+    "license": "ISC"
+  }

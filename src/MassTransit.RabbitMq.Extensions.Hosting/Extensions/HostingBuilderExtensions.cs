@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text.RegularExpressions;
 using GreenPipes.Configurators;
+using Humanizer;
 using MassTransit.RabbitMq.Extensions.Hosting.Contracts;
 
 namespace MassTransit.RabbitMq.Extensions.Hosting.Extensions
@@ -20,7 +21,7 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Extensions
         /// <param name="builder">The builder.</param>
         /// <param name="remoteApplicationName">Name of the remote application.</param>
         /// <returns></returns>
-        public static IMassTransitRabbitMqHostingBuilder WithSendEndpointByConvention<TMessage>(this IMassTransitRabbitMqHostingBuilder builder,
+        public static IMassTransitRabbitMqHostingBuilder WithFireAndForgetSendEndpointByConvention<TMessage>(this IMassTransitRabbitMqHostingBuilder builder,
                                                                                                 string remoteApplicationName)
             => builder.WithFireAndForgetSendEndpoint<TMessage>(GetQueueName<TMessage>(remoteApplicationName));
 
@@ -131,11 +132,8 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Extensions
                 throw new ArgumentNullException(nameof(applicationName));
             }
 
-            var type = typeof(TMessage);
-            var name = type.IsInterface && Regex.IsMatch(type.Name, "^I[A-Z]")
-                           ? type.Name.Substring(1) // type is interface and looks like ISomeInterface
-                           : type.Name;
-            return $"{applicationName}_{name.ToSnailCase()}";
+            var name = typeof(TMessage).GetSnailName();
+            return $"{applicationName}_{name.Underscore()}";
         }
 
         private static string GetQueueName<TMessage>(this IMassTransitRabbitMqHostingBuilder builder) => GetQueueName<TMessage>(builder.ApplicationName);

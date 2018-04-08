@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Title>MassTransit.RabbitMq.Extensions.Hosting.Dummy</Title>
+    <PackageId>MassTransit.RabbitMq.Extensions.Hosting.Dummy</PackageId>
+    <Authors>Alex Haslehurst</Authors>
+    <Description>Dummy ASP.Net Core client and/or server for MassTransit using MassTransit.RabbitMq.Extensions.Hosting</Description>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageTags>masstransit rabbitmq</PackageTags>
+    <IncludeSymbols>true</IncludeSymbols>
+    <IncludeSource>true</IncludeSource>
+    <PackageProjectUrl>https://github.com/axle-h/MassTransit.RabbitMq.Extensions.Hosting</PackageProjectUrl>
+    <IsPackable>true</IsPackable>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DocumentationFile>bin\Release\netstandard2.0\MassTransit.RabbitMq.Extensions.Hosting.Dummy.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore" Version="2.0.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.0.3" />
+    <PackageReference Include="Serilog.AspNetCore" Version="2.1.1" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MassTransit.RabbitMq.Extensions.Hosting\MassTransit.RabbitMq.Extensions.Hosting.csproj" />
+  </ItemGroup>
+
+</Project>
