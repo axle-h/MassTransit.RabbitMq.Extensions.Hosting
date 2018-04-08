@@ -22,14 +22,7 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Extensions
         /// <returns></returns>
         public static IMassTransitRabbitMqHostingBuilder WithSendEndpointByConvention<TMessage>(this IMassTransitRabbitMqHostingBuilder builder,
                                                                                                 string remoteApplicationName)
-        {
-            if (string.IsNullOrEmpty(remoteApplicationName))
-            {
-                throw new ArgumentNullException(nameof(remoteApplicationName));
-            }
-
-            return builder.WithFireAndForgetSendEndpoint<TMessage>(GetQueueName<TMessage>(remoteApplicationName));
-        }
+            => builder.WithFireAndForgetSendEndpoint<TMessage>(GetQueueName<TMessage>(remoteApplicationName));
 
         /// <summary>
         /// Configures a consumer of the specified type via convention.
@@ -43,7 +36,7 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Extensions
                                                                                                   Action<IRetryConfigurator> retry = null)
             where TConsumer : class, IConsumer<TMessage>
             where TMessage : class
-            => builder.Consume<TConsumer, TMessage>(GetQueueName<TMessage>(), retry);
+            => builder.Consume<TConsumer, TMessage>(builder.GetQueueName<TMessage>(), retry);
 
         /// <summary>
         /// Configures a fault consumer of the specified type.
@@ -77,7 +70,7 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Extensions
                                                                                                        Action<IRetryConfigurator> retry = null)
             where TConsumer : class, IConsumer<Fault<TMessage>>
             where TMessage : class
-            => builder.Consume<TConsumer, Fault<TMessage>>($"{GetQueueName<TMessage>()}_{FaultQueuePostfix}", retry);
+            => builder.Consume<TConsumer, Fault<TMessage>>($"{builder.GetQueueName<TMessage>()}_{FaultQueuePostfix}", retry);
 
         /// <summary>
         /// Configures an error consumer of the specified type.
@@ -113,15 +106,7 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Extensions
                                                                                                        Action<IRetryConfigurator> retry = null)
             where TConsumer : class, IConsumer<TMessage>
             where TMessage : class
-        {
-            if (string.IsNullOrEmpty(remoteApplicationName))
-            {
-                // Who would listen to errors on the same microservice.. right?
-                throw new ArgumentNullException(nameof(remoteApplicationName));
-            }
-
-            return builder.Consume<TConsumer, TMessage>($"{GetQueueName<TMessage>(remoteApplicationName)}_{ErrorQueuePostfix}", retry);
-        }
+            => builder.Consume<TConsumer, TMessage>($"{GetQueueName<TMessage>(remoteApplicationName)}_{ErrorQueuePostfix}", retry);
 
         /// <summary>
         /// Configures a send endpoint and a timeout for responses via convention.
@@ -136,23 +121,23 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Extensions
         public static IMassTransitRabbitMqHostingBuilder WithRequestResponseSendEndpointByConvention<TRequest, TResponse>(this IMassTransitRabbitMqHostingBuilder builder,
                                                                                                                           string remoteApplicationName,
                                                                                                                           TimeSpan? defaultTimeout = null)
+            => builder.WithRequestResponseSendEndpoint<TRequest, TResponse>(GetQueueName<TRequest>(remoteApplicationName), defaultTimeout);
+
+
+        private static string GetQueueName<TMessage>(string applicationName)
         {
-            if (string.IsNullOrEmpty(remoteApplicationName))
+            if (string.IsNullOrEmpty(applicationName))
             {
-                throw new ArgumentNullException(nameof(remoteApplicationName));
+                throw new ArgumentNullException(nameof(applicationName));
             }
 
-            return builder.WithRequestResponseSendEndpoint<TRequest, TResponse>(GetQueueName<TRequest>(remoteApplicationName), defaultTimeout);
-        }
-
-
-        private static string GetQueueName<TMessage>(string applicationName = null)
-        {
             var type = typeof(TMessage);
             var name = type.IsInterface && Regex.IsMatch(type.Name, "^I[A-Z]")
                            ? type.Name.Substring(1) // type is interface and looks like ISomeInterface
                            : type.Name;
-            return $"{applicationName ?? ApplicationConstants.Name ?? throw new InvalidOperationException("Must set the application name")}_{name.ToSnailCase()}";
+            return $"{applicationName}_{name.ToSnailCase()}";
         }
+
+        private static string GetQueueName<TMessage>(this IMassTransitRabbitMqHostingBuilder builder) => GetQueueName<TMessage>(builder.ApplicationName);
     }
 }

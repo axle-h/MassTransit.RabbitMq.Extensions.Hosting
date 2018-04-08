@@ -18,10 +18,12 @@ namespace MassTransit.RabbitMq.Extensions.Hosting
         private readonly MassTransitRabbitMqHostingOptions _options;
         private readonly IMassTransitRabbitMqHostingConfigurator _configurator;
         private readonly IServiceProvider _serviceProvider;
-        private readonly Lazy<Task<IBusControl>> _bus;
-        private CancellationToken _cancellationToken;
         private readonly ILogger _logger;
         private readonly ILoggerFactory _loggerFactory;
+        private readonly SemaphoreSlim _semaphore;
+        private readonly CancellationTokenSource _disposing;
+        private IBusControl _bus;
+        private bool _disposed;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MassTransitRabbitMqContext"/> class.
@@ -40,7 +42,8 @@ namespace MassTransit.RabbitMq.Extensions.Hosting
             _logger = loggerFactory.CreateLogger<MassTransitRabbitMqContext>();
             _loggerFactory = loggerFactory;
             _options = options.Value;
-            _bus = new Lazy<Task<IBusControl>>(GetBusAsync, LazyThreadSafetyMode.ExecutionAndPublication);
+            _semaphore = new SemaphoreSlim(1, 1);
+            _disposing = new CancellationTokenSource();
 
             foreach (var s in configurator.GetConfigurationStrings())
             {
@@ -56,34 +59,49 @@ namespace MassTransit.RabbitMq.Extensions.Hosting
         /// <remarks>
         /// This will never complete if RabbitMQ is not up.
         /// </remarks>
-        public Task<IBusControl> GetBusControlAsync(CancellationToken cancellationToken = default)
+        public async Task<IBusControl> GetBusControlAsync(CancellationToken cancellationToken = default)
         {
-            if (!_bus.IsValueCreated && cancellationToken != default && _cancellationToken == default)
+            if (_disposed)
             {
-                // Only the first call to this with a non-default cancellation token gets their cancellation token used.
-                // Hopefully it'll be the IHostedService.
-                _cancellationToken = cancellationToken;
+                throw new ObjectDisposedException(nameof(MassTransitRabbitMqContext));
             }
 
-            return _bus.Value;
+            if (_bus == null)
+            {
+                var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(_disposing.Token, cancellationToken);
+                await CreateBusAsync(linkedToken.Token);
+            }
+
+            return _bus;
         }
         
-        private async Task<IBusControl> GetBusAsync()
+        private async Task CreateBusAsync(CancellationToken cancellationToken)
         {
-            while (true)
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
             {
-                try
+                await _semaphore.WaitAsync(cancellationToken);
+                while (_bus == null)
                 {
-                    _cancellationToken.ThrowIfCancellationRequested();
-                    var bus = Bus.Factory.CreateUsingRabbitMq(Configure);
-                    await bus.StartAsync(_cancellationToken);
-                    return bus;
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    try
+                    {
+                        var bus = Bus.Factory.CreateUsingRabbitMq(Configure);
+                        await bus.StartAsync(cancellationToken);
+                        _bus = bus; // only assign once started.
+                    }
+                    catch (RabbitMqConnectionException)
+                    {
+                        _logger.LogError("Failed to connect to RabbitMQ, retrying");
+                        await Task.Delay(1000, cancellationToken);
+                    }
                 }
-                catch (RabbitMqConnectionException)
-                {
-                    _logger.LogError("Failed to connect to RabbitMQ, retrying");
-                    await Task.Delay(1000, _cancellationToken);
-                }
+            }
+            finally
+            {
+                _semaphore.Release();
             }
         }
 
@@ -107,13 +125,28 @@ namespace MassTransit.RabbitMq.Extensions.Hosting
         /// </summary>
         public void Dispose()
         {
-            if (!_bus.IsValueCreated || !_bus.Value.IsCompleted)
+            lock (_disposing)
             {
-                return;
-            }
+                if (_disposed)
+                {
+                    return;
+                }
 
-            var bus = _bus.Value.Result;
-            bus.Stop();
+                try
+                {
+                    _bus.Stop();
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "Failed to stop MassTransit bus");
+                }
+
+                _disposing.Cancel();
+                _disposing.Dispose();
+                _semaphore.Dispose();
+
+                _disposed = true;
+            }
         }
     }
 }

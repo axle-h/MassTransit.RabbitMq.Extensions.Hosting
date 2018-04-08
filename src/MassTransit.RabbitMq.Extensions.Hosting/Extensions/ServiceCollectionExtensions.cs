@@ -23,10 +23,9 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Extensions
                 throw new ArgumentNullException(nameof(applicationName));
             }
 
-            ApplicationConstants.Name = applicationName.ToSnailCase();
             services.Configure(configure);
 
-            var builder = new MassTransitRabbitMqHostingBuilder(services);
+            var builder = new MassTransitRabbitMqHostingBuilder(services, applicationName.ToSnailCase());
             services.AddSingleton(c => builder.BuildConfigurator());
             services.AddSingleton(c => builder.BuildSendEndpointRepository());
 

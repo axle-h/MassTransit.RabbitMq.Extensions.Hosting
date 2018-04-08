@@ -16,6 +16,14 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Contracts
         IServiceCollection Services { get; }
 
         /// <summary>
+        /// Gets the name of the application.
+        /// </summary>
+        /// <value>
+        /// The name of the application.
+        /// </value>
+        string ApplicationName { get; }
+
+        /// <summary>
         /// Configures a consumer of the specified type.
         /// </summary>
         /// <typeparam name="TConsumer">The type of the consumer.</typeparam>

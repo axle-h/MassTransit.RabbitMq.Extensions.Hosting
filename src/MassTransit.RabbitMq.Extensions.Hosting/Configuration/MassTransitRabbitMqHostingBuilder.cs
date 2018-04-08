@@ -24,12 +24,14 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Configuration
         private readonly IDictionary<Type, TimeSpan> _responseTimeouts;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MassTransitRabbitMqHostingBuilder"/> class.
+        /// Initializes a new instance of the <see cref="MassTransitRabbitMqHostingBuilder" /> class.
         /// </summary>
         /// <param name="services">The services.</param>
-        public MassTransitRabbitMqHostingBuilder(IServiceCollection services)
+        /// <param name="applicationName">Name of the application.</param>
+        public MassTransitRabbitMqHostingBuilder(IServiceCollection services, string applicationName)
         {
             Services = services;
+            ApplicationName = applicationName;
             _receivers = new Dictionary<string, ReceiverConfiguration>(StringComparer.OrdinalIgnoreCase);
             _configurators = new List<Action<IRabbitMqBusFactoryConfigurator>>();
             _sendEndpoints = new Dictionary<Type, string>();
@@ -44,6 +46,14 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Configuration
         /// Gets the services.
         /// </summary>
         public IServiceCollection Services { get; }
+
+        /// <summary>
+        /// Gets the name of the application.
+        /// </summary>
+        /// <value>
+        /// The name of the application.
+        /// </value>
+        public string ApplicationName { get; }
 
         /// <summary>
         /// Registers the specified action to be run on the RabbitMQ MassTransit bus factory.
