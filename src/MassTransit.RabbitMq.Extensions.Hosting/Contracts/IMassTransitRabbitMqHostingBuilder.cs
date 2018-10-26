@@ -30,8 +30,12 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Contracts
         /// <typeparam name="TMessage">The type of the message.</typeparam>
         /// <param name="queueName">Name of the queue.</param>
         /// <param name="retry">The optional retry configurator action.</param>
+        /// <param name="receiveEndpointConfigurator">The optional endpoint configurator action.</param>
         /// <returns></returns>
-        IMassTransitRabbitMqHostingBuilder Consume<TConsumer, TMessage>(string queueName, Action<IRetryConfigurator> retry = null)
+        IMassTransitRabbitMqHostingBuilder Consume<TConsumer, TMessage>(
+            string queueName, 
+            Action<IRetryConfigurator> retry = null,
+            Action<IRabbitMqReceiveEndpointConfigurator> receiveEndpointConfigurator = null)
             where TConsumer : class, IConsumer<TMessage>
             where TMessage : class;
 
