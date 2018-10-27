@@ -1,6 +1,6 @@
 defaults: &netcore
   docker:
-    - image: microsoft/aspnetcore-build:2.0
+    - image: microsoft/dotnet:2.1.403-sdk
       environment:
         VERSION_PREFIX: "1.0"
   working_directory: ~/app
