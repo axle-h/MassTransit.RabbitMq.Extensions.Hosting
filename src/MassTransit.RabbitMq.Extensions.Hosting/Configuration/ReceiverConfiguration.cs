@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using GreenPipes.Configurators;
+using MassTransit.RabbitMqTransport;
 
 namespace MassTransit.RabbitMq.Extensions.Hosting.Configuration
 {
@@ -18,5 +19,10 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Configuration
         /// Gets or sets the retry configurator to apply on this configured receive endpoint.
         /// </summary>
         public Action<IRetryConfigurator> RetryConfigurator { get; set; }
+
+        /// <summary>
+        /// Gets or sets the bus configurator to apply on this configured receive endpoint.
+        /// </summary>
+        public Action<IRabbitMqReceiveEndpointConfigurator> ReceiveEndpointConfigurator { get; set; }
     }
 }

@@ -79,8 +79,12 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Configuration
         /// <typeparam name="TMessage">The type of the message.</typeparam>
         /// <param name="queueName">Name of the queue.</param>
         /// <param name="retry">The optional retry configurator action.</param>
+        /// <param name="receiveEndpointConfigurator">The optional endpoint configurator action.</param>
         /// <returns></returns>
-        public IMassTransitRabbitMqHostingBuilder Consume<TConsumer, TMessage>(string queueName, Action<IRetryConfigurator> retry = null)
+        public IMassTransitRabbitMqHostingBuilder Consume<TConsumer, TMessage>(
+            string queueName, 
+            Action<IRetryConfigurator> retry = null,
+            Action<IRabbitMqReceiveEndpointConfigurator> receiveEndpointConfigurator = null)
             where TConsumer : class, IConsumer<TMessage>
             where TMessage : class
         {
@@ -98,6 +102,7 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Configuration
             }
 
             config.Types.Add(typeof(TConsumer));
+
             if (retry != null)
             {
                 if (config.RetryConfigurator != null)
@@ -106,6 +111,18 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Configuration
                 }
 
                 config.RetryConfigurator = retry;
+            }
+
+            if (receiveEndpointConfigurator != null)
+            {
+                if (config.ReceiveEndpointConfigurator != null)
+                {
+                    throw new ArgumentException(
+                        "Endpoint configurator already configured for queue: " + queueName, 
+                        nameof(receiveEndpointConfigurator));
+                }
+
+                config.ReceiveEndpointConfigurator = receiveEndpointConfigurator;
             }
 
             return this;

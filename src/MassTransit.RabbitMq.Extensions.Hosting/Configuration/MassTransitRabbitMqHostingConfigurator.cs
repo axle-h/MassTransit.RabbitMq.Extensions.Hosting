@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using GreenPipes;
-using GreenPipes.Configurators;
 using MassTransit.RabbitMq.Extensions.Hosting.Contracts;
 using MassTransit.RabbitMqTransport;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,6 +41,8 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Configuration
             {
                 configure.ReceiveEndpoint(host, kvp.Key, c =>
                                                          {
+                                                             kvp.Value.ReceiveEndpointConfigurator?.Invoke(c);
+
                                                              if (kvp.Value.RetryConfigurator != null)
                                                              {
                                                                  c.UseRetry(kvp.Value.RetryConfigurator);
