@@ -2,9 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using GreenPipes;
+using MassTransit.ExtensionsDependencyInjectionIntegration;
 using MassTransit.RabbitMq.Extensions.Hosting.Contracts;
 using MassTransit.RabbitMqTransport;
-using Microsoft.Extensions.DependencyInjection;
+using MassTransit.Scoping;
 
 namespace MassTransit.RabbitMq.Extensions.Hosting.Configuration
 {
@@ -50,7 +51,8 @@ namespace MassTransit.RabbitMq.Extensions.Hosting.Configuration
 
                                                              foreach (var type in kvp.Value.Types)
                                                              {
-                                                                 c.Consumer(type, provider.GetRequiredService);
+                                                                 ConsumerConfiguratorCache.Configure(type, c, new DependencyInjectionConsumerScopeProvider
+                                                                     (provider));
                                                              }
                                                          });
             }
